@@ -1,92 +1,127 @@
-var container = document.getElementById('container')
-var mousePosition
-var offset = [0,0]
-var dragging = false
 
-container.addEventListener('mousedown', function(event) {
-	var newDiv = document.createElement('div')
-	var newSpanTitle = document.createElement('span')
-	var newSpanDelete = document.createElement('span')
+ var dragging = null
+ var mouseOffset = null
+ var draggableField = document.getElementById('container')
+ var newDivCoords
 
-  newDiv.setAttribute('id', 'tagging-elem')
-  newSpanTitle.setAttribute('id', 'title')
-  newSpanDelete.setAttribute('id', 'delete')
-  newSpanDelete.setAttribute('hidden', '')
+ draggableField.addEventListener('touchstart', onTouch, false)
+ draggableField.addEventListener('mousedown', onTouch, false)
+ document.querySelector('body').addEventListener('mouseup', onTouchEnd, false)
+ document.querySelector('body').addEventListener('touchend', onTouchEnd, false)
+ document.querySelector('body').addEventListener('touchmove', onMove, false)
+ document.querySelector('body').addEventListener('mousemove', onMove, false)
 
-  newSpanTitle.innerHTML = getLorem()
-  newSpanDelete.innerHTML = 'X'
+ function onTouch(event)
+ {
+     event.preventDefault()
+     dragging = event.target
 
-  document.getElementById('container').appendChild(newDiv)
-  newDiv.appendChild(newSpanTitle)
-  newDiv.appendChild(newSpanDelete)
+     if (dragging.id === 'container') {
 
-	var domRect = newDiv.getBoundingClientRect()
-	newDiv.style.left = event.clientX - domRect.width / 2 - domRect.left + 'px'
-	newDiv.style.top = event.clientY - domRect.height / 2 - domRect.top + 'px'
-	event.preventDefault()
+         var newDiv = document.createElement('div')
+             newDiv.setAttribute('class', 'tagging-elem')
+         if (event.type === 'touchstart') {
+             event.y = event.touches[0].clientY
+             event.x =event.touches[0].clientX
+         }
 
-	newDiv.addEventListener('mousedown', function(event) {
-		dragging = true
-	  offset = [
-	  	newDiv.offsetLeft - event.clientX,
-	    newDiv.offsetTop - event.clientY
-	  ]
-		event.stopPropagation()
-	}, true)
+				 function getLorem() {
+				 		var arr = ['Lorem' ,'Lorem ipsum', 'ipsum', 'ipsum dolor', 'dolor']
+				  	var rand = Math.floor(Math.random() * arr.length)
+				  	 return (arr[rand])
+				 }
 
-	newDiv.addEventListener('mouseup', function() {
-		dragging = false
-	}, true)
+         newDiv.innerText = getLorem()
+         newDiv.style.top = event.y - event.target.offsetTop - 10 + 'px'
+         dragging.appendChild(newDiv)
 
-	newDiv.addEventListener('mousemove', function(event) {
-		var containerInnerCoords = {
-			top: domRect.top + container.clientTop,
-			left: domRect.left + container.clientLeft
-	 	}
+         var newDivDelete = document.createElement('div')
+         newDivDelete.setAttribute('class', 'remove')
+         newDivDelete.innerText = 'X'
+         newDiv.appendChild(newDivDelete)
 
-		var newDivCoords = {
-			top: event.clientY - containerInnerCoords.top - newDiv.clientHeight / 2,
-			left: event.clientX - containerInnerCoords.left - newDiv.clientWidth / 2
-		}
+         if (event.x - event.target.offsetLeft - 30 < 0) {
+             newDiv.style.left = '0px'
+             newDiv.children[0].style.float = 'right'
+         } else {
+             newDiv.style.left = event.x - event.target.offsetLeft - 30 + 'px'
+         }
 
-		if (dragging) {
-				//height border
-			if (newDivCoords.top < 0) newDivCoords.top = 0
 
-				//left border
-	    if (newDivCoords.left < 0) {
-				newDivCoords.left = 0
-				newSpanDelete.style.left = '100%'
-			}
-				//right border
-			if (newDivCoords.left + newDiv.clientWidth > container.clientWidth) {
-				newDivCoords.left = container.clientWidth - newDiv.clientWidth
-				newSpanDelete.style.right = '100%'
-			}
+     } else if (dragging.classList.contains('remove')) {
+         draggableField.removeChild(event.target.parentNode)
+     } else {
 
-				//bottom border
-			if (newDivCoords.top + newDiv.clientHeight > container.clientHeight) {
-				newDivCoords.top = container.clientHeight - newDiv.clientHeight
-			}
+         var pos = getPosition(dragging)
 
-			newDiv.style.left = newDivCoords.left + 'px'
-		 	newDiv.style.top = newDivCoords.top + 'px'
-		}
-		event.preventDefault()
-	}, true)
+				 function getPosition(event) {
+				 		var left = 0
+				      var top  = 0
 
-	newSpanTitle.addEventListener('dblclick' ,function () {
-		newSpanDelete.hidden = !newSpanDelete.hidden
-	},false)
+				      while (event.offsetParent) {
+				          left += event.offsetLeft
+				          top += event.offsetTop
+				          event = event.offsetParent
+				      }
 
-	newSpanDelete.addEventListener('click', function () {
-		this.parentNode.parentNode.removeChild(this.parentNode)
-	 	newDiv.appendChild(newSpanDelete)
-	}, false)
- }, false)
+				      left += event.offsetLeft
+				      top += event.offsetTop
 
-function getLorem() {
-	var arr = ['Lorem' ,'Lorem ipsum', 'ipsum', 'ipsum dolor', 'dolor']
-	var rand = Math.floor(Math.random() * arr.length)
-  return (arr[rand])
-}
+				      return {
+				          x: left,
+				          y: top
+				      }
+				  }
+
+         mouseOffset= {
+             x: event.pageX - pos.x,
+             y: event.pageY - pos.y
+         }
+     }
+ }
+
+ function onTouchEnd() {
+     dragging = null
+ }
+
+ function onMove(event) {
+     if (dragging && dragging.classList.contains('tagging-elem')) {
+
+         var domRect = draggableField.getBoundingClientRect()
+
+         var containerInnerCoords = {
+             top: domRect.top + draggableField.clientTop,
+             left: domRect.left + draggableField.clientLeft
+         }
+
+         if (event.type === 'touchmove') {
+             newDivCoords = {
+                 top: event.changedTouches[0].clientY - containerInnerCoords.top - mouseOffset.y,
+                 left: event.changedTouches[0].clientX - containerInnerCoords.left - mouseOffset.x
+             }
+         } else {
+             newDivCoords = {
+                 top: event.clientY - containerInnerCoords.top - mouseOffset.y,
+                 left: event.clientX - containerInnerCoords.left - mouseOffset.x
+             }
+         }
+
+         if (newDivCoords.top < 0) newDivCoords.top = 0
+
+         if (newDivCoords.left < 0) {
+             newDivCoords.left = 0
+         }
+         if (newDivCoords.left + dragging.clientWidth > draggableField.clientWidth) {
+             newDivCoords.left = draggableField.clientWidth - dragging.clientWidth
+         }
+
+         if (newDivCoords.top + dragging.clientHeight > draggableField.clientHeight) {
+             newDivCoords.top = draggableField.clientHeight - dragging.clientHeight
+         }
+         var removeElement = dragging.children[0]
+         newDivCoords.left > 30 ? removeElement.style.float = 'left' : removeElement.style.float = 'right'
+         dragging.style.left = newDivCoords.left - 1 + 'px'
+         dragging.style.top = newDivCoords.top + 'px'
+
+     }
+ }
